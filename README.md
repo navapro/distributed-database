@@ -23,6 +23,8 @@ Project documents:
 
 - [Project plan](planning.md)
 - [Development guide](docs/development.md)
+- [Repository structure](docs/repository-structure.md)
+- [Testing guide](docs/testing.md)
 - [Storage record format](docs/storage-record-format.md)
 - [Memtable design](docs/memtable-design.md)
 

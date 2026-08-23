@@ -53,15 +53,17 @@ Goal: define stable contracts so later work can happen in parallel.
 | Priority | Task | Owner | Status | Can Run Concurrently With | Output |
 |---|---|---|---|---|---|
 | P0 | Define storage record format: key, value, timestamp, tombstone | Naveen | Done | WAL design, memtable design | `docs/storage-record-format.md` |
-| P0 | Define repository folder structure | Yashila | Not Started | storage docs | folder skeleton proposal |
+| P0 | Define repository folder structure | Yashila | Done | storage docs | `docs/repository-structure.md` |
 | P0 | Define coding conventions and build approach | Naveen | Done | test strategy | `docs/development.md` |
-| P0 | Define test strategy and naming | Yashila | Not Started | build approach | `docs/testing.md` |
+| P0 | Define test strategy and naming | Yashila | Done | build approach | `docs/testing.md` |
+
+Milestone status: Done
 
 Integration checkpoint:
 
-- Agree on folder structure.
-- Agree on record interface.
-- Agree on how tests will be run.
+- [x] Agree on folder structure.
+- [x] Agree on record interface.
+- [x] Agree on how tests will be run.
 
 ## Milestone 1: Single-Node Storage Engine
 
