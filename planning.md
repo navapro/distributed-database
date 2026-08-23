@@ -1,6 +1,6 @@
-# AtlasDB Project Plan
+# Quorum DB Project Plan
 
-This plan splits the project between Naveen and Yashila so both people learn storage-engine internals, distributed systems, testing, and performance work. The assignments are intentionally mixed instead of giving one person only storage and the other only networking.
+This plan is organized for two people working concurrently with low merge conflict risk. Naveen and Yashila should usually work in different modules, with short integration checkpoints where both branches are merged and tested together.
 
 Priority labels:
 
@@ -12,179 +12,437 @@ Status labels:
 
 - `Not Started`
 - `In Progress`
+- `Blocked`
 - `Done`
 
-## Phase 1: Storage Engine Foundation
+## Ownership Model
 
-| Priority | Task | Owner | Status | Concepts |
+Each person owns a module area for a milestone. The other person can review, test, or pair, but should avoid editing the same files during that milestone unless it is an integration checkpoint.
+
+| Area | Primary Owner | Reviewer | Main Files Later |
+|---|---|---|---|
+| Project docs and planning | Naveen | Yashila | `README.md`, `planning.md`, `docs/` |
+| Storage record contract | Naveen | Yashila | `docs/storage-record-format.md`, later `record.*` |
+| WAL and crash recovery | Yashila | Naveen | `storage/wal/` |
+| Memtable and in-memory ordering | Naveen | Yashila | `storage/memtable/` |
+| SSTable read/write format | Yashila | Naveen | `storage/sstable/` |
+| Bloom filters and sparse indexes | Naveen | Yashila | `storage/bloom/`, `storage/sstable/` |
+| Compaction | Yashila | Naveen | `storage/compaction/` |
+| Hash ring and virtual nodes | Naveen | Yashila | `cluster/hashing/` |
+| Coordinator and quorum logic | Yashila | Naveen | `coordinator/`, `replication/` |
+| Failure handling and repair | Naveen | Yashila | `repair/`, `replication/` |
+| TCP protocol and server | Naveen | Yashila | `networking/` |
+| CLI tools | Yashila | Naveen | `client/` |
+| Docker and local cluster deployment | Yashila | Naveen | `deployment/`, `Dockerfile`, `compose.yaml` |
+| Simulation and chaos testing | Naveen | Yashila | `simulation/`, `chaos/` |
+| Benchmarks and metrics | Yashila | Naveen | `benchmark/`, `metrics/` |
+
+## Concurrency Rules
+
+- Only one person edits a module's implementation files at a time.
+- Shared headers/interfaces should be changed in small PRs before implementation work depends on them.
+- If both people need the same interface, write the interface first, merge it, then split implementation.
+- Pair on design and tests, but avoid both editing the same source file.
+- Integration happens at planned checkpoints, not continuously in the middle of feature work.
+- Each task should include tests in the same module when possible.
+
+## Milestone 0: Project Contracts
+
+Goal: define stable contracts so later work can happen in parallel.
+
+| Priority | Task | Owner | Status | Can Run Concurrently With | Output |
+|---|---|---|---|---|---|
+| P0 | Define storage record format: key, value, timestamp, tombstone | Naveen | Done | WAL design, memtable design | `docs/storage-record-format.md` |
+| P0 | Define repository folder structure | Yashila | Not Started | storage docs | folder skeleton proposal |
+| P0 | Define coding conventions and build approach | Naveen | Not Started | test strategy | `docs/development.md` |
+| P0 | Define test strategy and naming | Yashila | Not Started | build approach | `docs/testing.md` |
+
+Integration checkpoint:
+
+- Agree on folder structure.
+- Agree on record interface.
+- Agree on how tests will be run.
+
+## Milestone 1: Single-Node Storage Engine
+
+Goal: build a durable local key-value engine before distributed features.
+
+### Parallel Track A: Memtable and Record Semantics
+
+Owner: Naveen
+
+| Priority | Task | Status | Depends On | Concepts |
 |---|---|---|---|---|
-| P0 | Define storage record format: key, value, timestamp, tombstone | Naveen | Not Started | data modeling, versioning |
-| P0 | Implement WAL append before writes are acknowledged | Yashila | Not Started | durability, crash safety |
-| P0 | Implement WAL replay on startup | Naveen | Not Started | recovery, idempotency |
-| P0 | Implement sorted memtable | Yashila | Not Started | ordered indexes, write path |
-| P0 | Flush memtable to immutable SSTable | Naveen | Not Started | LSM write path |
-| P0 | Implement SSTable read path | Yashila | Not Started | sorted disk files, read amplification |
-| P0 | Implement tombstones for deletes | Naveen | Not Started | delete semantics, compaction safety |
-| P0 | Add SSTable checksums | Yashila | Not Started | corruption detection |
-| P0 | Add storage unit tests | Naveen + Yashila | Not Started | test design, edge cases |
+| P0 | Implement `Record` type and last-write-wins comparison | Not Started | storage record format | versioning |
+| P0 | Implement sorted memtable interface | Not Started | `Record` type | ordered maps/skiplists |
+| P0 | Implement `PUT`, `GET`, and tombstone behavior in memtable | Not Started | memtable interface | write path |
+| P0 | Add memtable unit tests | Not Started | memtable behavior | test design |
 
-## Phase 2: Better LSM Internals
+### Parallel Track B: WAL
 
-| Priority | Task | Owner | Status | Concepts |
+Owner: Yashila
+
+| Priority | Task | Status | Depends On | Concepts |
 |---|---|---|---|---|
-| P0 | Add Bloom filters to SSTables | Naveen | Not Started | probabilistic data structures |
-| P0 | Add sparse index per SSTable | Yashila | Not Started | indexing, disk seeks |
-| P0 | Implement size-tiered compaction | Naveen | Not Started | merge algorithms, write amplification |
-| P1 | Add block cache | Yashila | Not Started | caching, locality |
-| P1 | Add background flush worker | Naveen | Not Started | concurrency, producer/consumer |
-| P1 | Add background compaction worker | Yashila | Not Started | scheduling, thread safety |
-| P1 | Track storage metrics | Naveen + Yashila | Not Started | observability |
+| P0 | Design binary WAL entry format | Not Started | storage record format | durability |
+| P0 | Implement WAL append | Not Started | WAL format | file I/O |
+| P0 | Implement WAL iterator/replay reader | Not Started | WAL append | crash recovery |
+| P0 | Add WAL checksum validation | Not Started | WAL reader | corruption detection |
+| P0 | Add WAL unit tests | Not Started | WAL implementation | recovery tests |
 
-## Phase 3: In-Process Distributed Database
+Integration checkpoint:
 
-| Priority | Task | Owner | Status | Concepts |
+- Connect memtable writes to WAL append.
+- Verify acknowledged writes survive restart.
+- Run memtable and WAL tests together.
+
+### Parallel Track C: SSTable Writer
+
+Owner: Yashila
+
+| Priority | Task | Status | Depends On | Concepts |
 |---|---|---|---|---|
-| P0 | Implement consistent hash ring | Naveen | Not Started | hashing, token ownership |
-| P0 | Add virtual nodes | Yashila | Not Started | load balancing, rebalancing |
-| P0 | Implement cluster node abstraction | Naveen | Not Started | architecture boundaries |
-| P0 | Implement coordinator write path | Yashila | Not Started | leaderless replication |
-| P0 | Implement coordinator read path | Naveen | Not Started | quorum reads |
-| P0 | Support replication factor configuration | Yashila | Not Started | replica placement |
-| P0 | Support consistency levels: `ONE`, `QUORUM`, `ALL` | Naveen | Not Started | tunable consistency |
-| P0 | Implement last-write-wins conflict resolution | Yashila | Not Started | conflict resolution |
-| P0 | Add integration tests for quorum behavior | Naveen + Yashila | Not Started | distributed correctness |
+| P0 | Design SSTable entry format | Not Started | storage record format | disk layout |
+| P0 | Write sorted memtable records to SSTable | Not Started | memtable iterator | immutable files |
+| P0 | Add SSTable checksums | Not Started | SSTable writer | crash safety |
+| P0 | Add SSTable writer tests | Not Started | SSTable writer | persistence |
 
-## Phase 4: Failure Handling and Repair
+### Parallel Track D: SSTable Reader
 
-| Priority | Task | Owner | Status | Concepts |
+Owner: Naveen
+
+| Priority | Task | Status | Depends On | Concepts |
 |---|---|---|---|---|
-| P0 | Add manual node up/down simulation | Naveen | Not Started | failure modeling |
-| P0 | Implement hinted handoff | Yashila | Not Started | availability, delayed repair |
-| P0 | Replay hints when nodes recover | Naveen | Not Started | recovery workflows |
-| P0 | Implement read repair | Yashila | Not Started | replica convergence |
-| P1 | Implement anti-entropy repair command | Naveen | Not Started | background repair |
-| P1 | Implement Merkle tree comparison | Yashila | Not Started | range hashing, efficient repair |
-| P1 | Add repair metrics | Naveen + Yashila | Not Started | observability |
+| P0 | Implement SSTable sequential reader | Not Started | SSTable format | parsing |
+| P0 | Implement point lookup from SSTable | Not Started | sequential reader | read path |
+| P0 | Add tombstone handling in SSTable reads | Not Started | point lookup | delete semantics |
+| P0 | Add SSTable reader tests | Not Started | SSTable reader | edge cases |
 
-## Phase 5: Networking and CLI
+Integration checkpoint:
 
-| Priority | Task | Owner | Status | Concepts |
+- Flush memtable to SSTable.
+- Read values back after process restart.
+- Confirm tombstones survive flush and restart.
+
+## Milestone 2: LSM Read Path and Compaction
+
+Goal: make storage efficient enough to support distributed reads.
+
+### Parallel Track A: Lookup Acceleration
+
+Owner: Naveen
+
+| Priority | Task | Status | Depends On | Concepts |
 |---|---|---|---|---|
-| P0 | Design custom binary protocol | Naveen | Not Started | protocol design, serialization |
-| P0 | Implement protocol encoder/decoder | Yashila | Not Started | binary formats |
-| P0 | Build basic TCP node server | Naveen | Not Started | sockets, request handling |
-| P0 | Build basic TCP client | Yashila | Not Started | client/server systems |
-| P0 | Add CLI command: `atlas put` | Naveen | Not Started | user tooling |
-| P0 | Add CLI command: `atlas get` | Yashila | Not Started | user tooling |
-| P0 | Add CLI command: `atlas delete` | Naveen | Not Started | user tooling |
-| P0 | Add CLI command: `atlasctl status` | Yashila | Not Started | cluster management |
-| P1 | Add request timeouts | Naveen | Not Started | reliability |
-| P1 | Add bounded request queue | Yashila | Not Started | backpressure |
+| P0 | Add Bloom filter data structure | Not Started | SSTable keys | probabilistic filtering |
+| P0 | Persist Bloom filter metadata per SSTable | Not Started | Bloom filter | storage metadata |
+| P0 | Add sparse index format | Not Started | SSTable writer | indexing |
+| P0 | Use Bloom filter and sparse index in point lookup | Not Started | metadata formats | read amplification |
+| P0 | Benchmark negative reads with and without Bloom filter | Not Started | lookup acceleration | measurement |
 
-## Phase 6: Gossip and Failure Detection
+### Parallel Track B: Compaction
 
-| Priority | Task | Owner | Status | Concepts |
+Owner: Yashila
+
+| Priority | Task | Status | Depends On | Concepts |
 |---|---|---|---|---|
-| P1 | Define gossip node state | Naveen | Not Started | membership metadata |
-| P1 | Implement gossip merge rules | Yashila | Not Started | eventual convergence |
-| P1 | Add periodic gossip exchange | Naveen | Not Started | distributed coordination |
-| P1 | Implement phi accrual failure detector | Yashila | Not Started | adaptive failure detection |
-| P1 | Connect gossip state to ring status | Naveen | Not Started | cluster visibility |
-| P1 | Add failure detector tests | Naveen + Yashila | Not Started | timing-sensitive tests |
+| P0 | Implement merge iterator across SSTables | Not Started | SSTable reader | merge algorithms |
+| P0 | Implement size-tiered compaction | Not Started | merge iterator | write amplification |
+| P0 | Eliminate overwritten records during compaction | Not Started | last-write-wins | storage cleanup |
+| P0 | Preserve tombstones safely during compaction | Not Started | tombstone rules | delete safety |
+| P0 | Add compaction tests | Not Started | compaction | correctness |
 
-## Phase 7: Rebalancing and Streaming
+Integration checkpoint:
 
-| Priority | Task | Owner | Status | Concepts |
+- Read path checks memtable, then newest SSTables.
+- Compaction output is readable by the normal SSTable reader.
+- Negative reads use Bloom filters.
+
+## Milestone 3: In-Process Distributed Core
+
+Goal: model a leaderless cluster in one process before TCP networking.
+
+### Parallel Track A: Ring and Membership Model
+
+Owner: Naveen
+
+| Priority | Task | Status | Depends On | Concepts |
 |---|---|---|---|---|
-| P1 | Compute token ranges owned by each node | Naveen | Not Started | consistent hashing ranges |
-| P1 | Implement range scan from storage engine | Yashila | Not Started | ordered iteration |
-| P1 | Implement range streaming between nodes | Naveen | Not Started | data movement |
-| P1 | Add node join flow | Yashila | Not Started | rebalancing |
-| P1 | Add node removal/decommission flow | Naveen | Not Started | cluster operations |
-| P2 | Stream SSTable ranges instead of key batches | Yashila | Not Started | performance engineering |
+| P0 | Implement consistent hash ring | Not Started | none | token ownership |
+| P0 | Add virtual nodes | Not Started | hash ring | load distribution |
+| P0 | Compute replica preference list for a key | Not Started | virtual nodes | replica placement |
+| P0 | Add ring unit tests | Not Started | preference list | deterministic hashing |
 
-## Phase 8: Testing, Simulation, and Chaos
+### Parallel Track B: Quorum Coordinator
 
-| Priority | Task | Owner | Status | Concepts |
+Owner: Yashila
+
+| Priority | Task | Status | Depends On | Concepts |
 |---|---|---|---|---|
-| P0 | Add crash/restart tests for WAL | Naveen | Not Started | crash safety |
-| P0 | Add failure tests for quorum availability | Yashila | Not Started | availability guarantees |
-| P1 | Build randomized workload generator | Naveen | Not Started | property-style testing |
-| P1 | Record operation history | Yashila | Not Started | correctness checking |
-| P1 | Build deterministic simulator with seed | Naveen | Not Started | reproducible distributed bugs |
-| P1 | Add simulated network partitions | Yashila | Not Started | partition tolerance |
-| P2 | Build chaos testing executable | Naveen + Yashila | Not Started | fault injection |
-| P2 | Add Jepsen-style history checker | Naveen + Yashila | Not Started | formal-ish validation |
+| P0 | Define coordinator request/response types | Not Started | storage API | boundaries |
+| P0 | Implement write coordinator for `ONE`, `QUORUM`, `ALL` | Not Started | preference list interface | leaderless writes |
+| P0 | Implement read coordinator for `ONE`, `QUORUM`, `ALL` | Not Started | storage API | quorum reads |
+| P0 | Add last-write-wins conflict resolution in coordinator | Not Started | `Record` comparison | consistency |
+| P0 | Add coordinator unit tests with fake replicas | Not Started | coordinator | test doubles |
 
-## Phase 9: Benchmarking and Performance
+Integration checkpoint:
 
-| Priority | Task | Owner | Status | Concepts |
+- Coordinator uses the real hash ring.
+- In-process cluster can write and read with replication factor 3.
+- Quorum tests pass with fake node failures.
+
+## Milestone 4: Failure Handling and Repair
+
+Goal: keep the system available during replica failures and converge after recovery.
+
+### Parallel Track A: Failure State and Hints
+
+Owner: Naveen
+
+| Priority | Task | Status | Depends On | Concepts |
 |---|---|---|---|---|
-| P1 | Build benchmark executable | Naveen | Not Started | measurement methodology |
-| P1 | Report throughput | Yashila | Not Started | performance metrics |
-| P1 | Report p50, p95, p99 latency | Naveen | Not Started | latency analysis |
-| P1 | Benchmark consistency levels | Yashila | Not Started | consistency vs latency |
-| P1 | Benchmark Bloom filter negative reads | Naveen | Not Started | storage optimization |
-| P2 | Benchmark replication factor scaling | Yashila | Not Started | distributed performance |
-| P2 | Profile with sanitizers/profilers | Naveen + Yashila | Not Started | debugging, optimization |
+| P0 | Add node health state to in-process cluster | Not Started | cluster model | failure modeling |
+| P0 | Store hinted handoff records for down replicas | Not Started | write coordinator | availability |
+| P0 | Replay hints after node recovery | Not Started | hint storage | recovery |
+| P0 | Add hinted handoff tests | Not Started | hint replay | fault tolerance |
 
-## Phase 10: Stretch Features
+### Parallel Track B: Read Repair
+
+Owner: Yashila
+
+| Priority | Task | Status | Depends On | Concepts |
+|---|---|---|---|---|
+| P0 | Detect stale replica responses during reads | Not Started | read coordinator | convergence |
+| P0 | Write repaired record back to stale replicas | Not Started | stale detection | repair |
+| P0 | Add read-repair metrics | Not Started | repair path | observability |
+| P0 | Add read-repair tests | Not Started | repair path | distributed correctness |
+
+Integration checkpoint:
+
+- A recovered node receives missed writes.
+- A stale live replica is repaired by a read.
+- Quorum behavior remains correct while one replica is down.
+
+## Milestone 5: TCP Protocol and CLI
+
+Goal: move from in-process simulation to multiple processes.
+
+### Parallel Track A: Server and Protocol
+
+Owner: Naveen
+
+| Priority | Task | Status | Depends On | Concepts |
+|---|---|---|---|---|
+| P0 | Design binary protocol header | Not Started | request types | serialization |
+| P0 | Implement protocol encoder/decoder | Not Started | protocol header | binary formats |
+| P0 | Build basic TCP node server | Not Started | coordinator API | sockets |
+| P1 | Add request IDs and timeouts | Not Started | TCP server | reliability |
+| P1 | Add bounded request queue | Not Started | TCP server | backpressure |
+
+### Parallel Track B: Client and Control CLI
+
+Owner: Yashila
+
+| Priority | Task | Status | Depends On | Concepts |
+|---|---|---|---|---|
+| P0 | Build TCP client library | Not Started | protocol encoder/decoder | client/server |
+| P0 | Add `quorumdb put` | Not Started | client library | CLI design |
+| P0 | Add `quorumdb get` | Not Started | client library | CLI design |
+| P0 | Add `quorumdb delete` | Not Started | client library | CLI design |
+| P0 | Add `quorumctl status` | Not Started | server status endpoint | operations |
+| P1 | Add `quorumctl ring` | Not Started | ring status endpoint | observability |
+
+### Parallel Track C: Docker Deployment
+
+Owner: Yashila
+
+This track uses separate deployment files, so it can proceed while Naveen works in `networking/`.
+
+| Priority | Task | Status | Depends On | Concepts |
+|---|---|---|---|---|
+| P0 | Create a Docker image for one Quorum DB node | Not Started | runnable node process | containerization |
+| P0 | Create a three-node Docker Compose cluster | Not Started | Docker image | local orchestration |
+| P0 | Give each node an independent persistent volume | Not Started | Compose cluster | durable container storage |
+| P0 | Configure node ID, ports, seeds, and replication through environment variables | Not Started | node configuration | deployment configuration |
+| P0 | Document cluster start, stop, restart, and log commands | Not Started | Compose cluster | local operations |
+| P0 | Test node failure and recovery using container stop/restart | Not Started | quorum integration | failure testing |
+
+Integration checkpoint:
+
+- Start three node containers with Docker Compose.
+- Write through one node and read through another.
+- Stop and restart one container without losing acknowledged data.
+- Preserve each node's data in its own volume.
+- CLI can show node status and ring ownership.
+
+## Milestone 6: Gossip and Real Failure Detection
+
+Goal: replace manual failure toggles with cluster membership and adaptive suspicion.
+
+### Parallel Track A: Gossip
+
+Owner: Naveen
+
+| Priority | Task | Status | Depends On | Concepts |
+|---|---|---|---|---|
+| P1 | Define gossip node state | Not Started | node identity | membership metadata |
+| P1 | Implement gossip merge rules | Not Started | gossip state | eventual convergence |
+| P1 | Add periodic gossip exchange | Not Started | TCP internode messages | distributed coordination |
+| P1 | Add gossip tests | Not Started | merge rules | convergence |
+
+### Parallel Track B: Phi Accrual Failure Detector
+
+Owner: Yashila
+
+| Priority | Task | Status | Depends On | Concepts |
+|---|---|---|---|---|
+| P1 | Track heartbeat arrival intervals | Not Started | time abstraction | failure detection |
+| P1 | Compute phi suspicion score | Not Started | heartbeat history | statistics |
+| P1 | Mark nodes suspected/unavailable based on phi | Not Started | phi score | adaptive health |
+| P1 | Add failure detector tests with fake clock | Not Started | detector | timing tests |
+
+Integration checkpoint:
+
+- Gossip carries heartbeat state.
+- Failure detector updates node health used by coordinator.
+- `quorumctl status` shows healthy/suspected/down.
+
+## Milestone 7: Repair, Rebalancing, and Streaming
+
+Goal: support long-running clusters where data moves and divergence is repaired efficiently.
+
+### Parallel Track A: Repair
+
+Owner: Naveen
+
+| Priority | Task | Status | Depends On | Concepts |
+|---|---|---|---|---|
+| P1 | Build Merkle tree for key ranges | Not Started | storage range scan | anti-entropy |
+| P1 | Compare Merkle trees between replicas | Not Started | Merkle tree | efficient diffing |
+| P1 | Repair differing ranges | Not Started | range streaming | convergence |
+| P1 | Add manual `quorumctl repair` command | Not Started | repair API | operations |
+
+### Parallel Track B: Rebalancing and Streaming
+
+Owner: Yashila
+
+| Priority | Task | Status | Depends On | Concepts |
+|---|---|---|---|---|
+| P1 | Compute token ranges owned by each node | Not Started | hash ring | range ownership |
+| P1 | Implement storage range scan | Not Started | SSTable iteration | ordered iteration |
+| P1 | Stream key ranges between nodes | Not Started | networking | data movement |
+| P1 | Add node join flow | Not Started | range streaming | rebalancing |
+| P1 | Add node decommission flow | Not Started | range streaming | cluster operations |
+
+Integration checkpoint:
+
+- Adding a node transfers the ranges it should own.
+- Removing a node preserves availability.
+- Anti-entropy repair transfers only differing ranges.
+
+## Milestone 8: Testing, Simulation, and Chaos
+
+Goal: make failures reproducible and correctness claims testable.
+
+### Parallel Track A: Deterministic Simulation
+
+Owner: Naveen
+
+| Priority | Task | Status | Depends On | Concepts |
+|---|---|---|---|---|
+| P1 | Add fake clock abstraction | Not Started | core APIs | deterministic time |
+| P1 | Add simulated network abstraction | Not Started | messaging API | reproducible messaging |
+| P1 | Add seeded random scheduler | Not Started | simulation | reproducibility |
+| P1 | Add simulated crash/restart | Not Started | storage recovery | crash testing |
+
+### Parallel Track B: Workload and History Checking
+
+Owner: Yashila
+
+| Priority | Task | Status | Depends On | Concepts |
+|---|---|---|---|---|
+| P1 | Build randomized workload generator | Not Started | client API | property-style testing |
+| P1 | Record operation history | Not Started | workload generator | correctness logs |
+| P1 | Check acknowledged writes are not lost | Not Started | history | safety property |
+| P1 | Check eventual convergence after healing | Not Started | history | liveness property |
+
+Integration checkpoint:
+
+- A failed simulation prints the seed.
+- Running with the same seed reproduces the same sequence.
+- History checker can flag at least one intentionally injected bug.
+
+## Milestone 9: Benchmarks and Observability
+
+Goal: report real performance numbers and understand tradeoffs.
+
+### Parallel Track A: Benchmark Driver
+
+Owner: Yashila
+
+| Priority | Task | Status | Depends On | Concepts |
+|---|---|---|---|---|
+| P1 | Build benchmark executable | Not Started | CLI/client API | measurement |
+| P1 | Add configurable clients and operations | Not Started | benchmark executable | workload design |
+| P1 | Report throughput | Not Started | workload driver | performance |
+| P1 | Report p50, p95, p99 latency | Not Started | latency recorder | tail latency |
+
+### Parallel Track B: Metrics and Experiments
+
+Owner: Naveen
+
+| Priority | Task | Status | Depends On | Concepts |
+|---|---|---|---|---|
+| P1 | Add request counters | Not Started | coordinator | observability |
+| P1 | Add storage metrics | Not Started | storage engine | observability |
+| P1 | Add replication metrics | Not Started | coordinator/repair | observability |
+| P1 | Benchmark consistency levels | Not Started | benchmark driver | tradeoff analysis |
+| P1 | Benchmark Bloom filter negative reads | Not Started | storage metrics | storage optimization |
+
+Integration checkpoint:
+
+- Benchmark output includes throughput and latency percentiles.
+- Metrics explain at least one performance result.
+- Results are documented in `docs/benchmarks.md`.
+
+## Milestone 10: Stretch Features
+
+Only start these after the P0 system works end to end.
 
 | Priority | Task | Owner | Status | Concepts |
 |---|---|---|---|---|
 | P2 | Paxos-based compare-and-set | Naveen + Yashila | Not Started | consensus |
 | P2 | Vector clocks | Naveen | Not Started | causal metadata |
 | P2 | Hybrid logical clocks | Yashila | Not Started | distributed time |
-| P2 | Docker Compose local cluster | Naveen | Not Started | deployment |
+| P2 | Kubernetes deployment manifests | Naveen | Not Started | orchestration |
 | P2 | Prometheus metrics endpoint | Yashila | Not Started | observability |
 | P2 | Simple cluster dashboard | Naveen + Yashila | Not Started | visualization |
 
-## Learning Rotation
-
-To make sure both people learn the important parts:
-
-- Naveen starts with WAL replay, SSTables, coordinator reads, and consistent hashing.
-- Yashila starts with WAL append, memtables, coordinator writes, and virtual nodes.
-- Naveen owns the first version of custom protocol design; Yashila owns the encoder/decoder implementation.
-- Yashila owns the first version of phi accrual failure detection; Naveen owns gossip state integration.
-- Naveen owns benchmark structure; Yashila owns benchmark reporting.
-- Pair on tests whenever the feature affects correctness or failure behavior.
-
-## Weekly Working Style
-
-Each week:
-
-1. Pick 2-4 tasks total, not 10.
-2. Each person owns at least one implementation task.
-3. Each person reviews or tests the other person's work.
-4. End the week by updating this file with status changes.
-5. Write down one concept each person learned.
-
 ## First Four Weeks
 
-### Week 1
+### Week 1: Contracts and Independent Storage Modules
 
-- Naveen: storage record format, WAL replay test
-- Yashila: WAL append, sorted memtable
-- Pair: storage unit test structure
+- Naveen: finish development docs, implement or prepare memtable interface.
+- Yashila: define repository folder structure, design WAL format.
+- Integration: agree on `Record` API and test layout.
 
-### Week 2
+### Week 2: WAL and Memtable
 
-- Naveen: SSTable flush/write path
-- Yashila: SSTable read path
-- Pair: tombstone and restart tests
+- Naveen: implement memtable behavior and tests.
+- Yashila: implement WAL append/replay and tests.
+- Integration: connect WAL plus memtable write path.
 
-### Week 3
+### Week 3: SSTable Split
 
-- Naveen: consistent hash ring
-- Yashila: virtual nodes
-- Pair: replica placement tests
+- Naveen: implement SSTable reader and point lookup tests.
+- Yashila: implement SSTable writer and checksum tests.
+- Integration: flush memtable to SSTable and read it back.
 
-### Week 4
+### Week 4: Hashing and Coordinator
 
-- Naveen: coordinator read path with `QUORUM`
-- Yashila: coordinator write path with `QUORUM`
-- Pair: integration tests for node failure and recovery
+- Naveen: implement hash ring, virtual nodes, replica preference tests.
+- Yashila: implement coordinator tests using fake replicas.
+- Integration: coordinator uses real preference lists.
 
 ## Definition of Done
 
@@ -193,12 +451,14 @@ A task is done only when:
 - The code builds.
 - Tests exist for the main behavior.
 - Edge cases are documented or tested.
-- The README or docs are updated if behavior changed.
+- Public behavior is documented if it changed.
 - The other person has reviewed the work.
+- Integration checkpoint passes before the next milestone starts.
 
 ## Biggest Risks
 
-- Trying to build networking before the storage engine is reliable.
+- Both people editing the same files at the same time.
+- Starting networking before storage and coordinator interfaces are stable.
 - Claiming consistency guarantees that are not tested.
 - Spending too much time on dashboards or deployment too early.
 - Building many partial features instead of finishing the core path.
@@ -206,4 +466,4 @@ A task is done only when:
 
 ## Guiding Rule
 
-Make the smallest version that teaches the real concept, test it under failure, then improve it.
+Own separate modules, merge at planned checkpoints, and make the smallest version that teaches the real concept before adding complexity.

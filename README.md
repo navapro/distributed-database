@@ -1,8 +1,8 @@
-# AtlasDB
+# Quorum DB
 
 A Cassandra/Dynamo-inspired, leaderless distributed key-value database written from scratch in C++.
 
-AtlasDB is meant to demonstrate database internals and distributed-systems engineering without trying to clone all of Cassandra. The project should be small enough to finish, but deep enough to show storage durability, replication, failure handling, repair, and correctness testing.
+Quorum DB is meant to demonstrate database internals and distributed-systems engineering without trying to clone all of Cassandra. The project should be small enough to finish, but deep enough to show storage durability, replication, failure handling, repair, and correctness testing.
 
 ## Project Goal
 
@@ -26,6 +26,7 @@ These are the minimum features needed for the project to feel complete and credi
 ### Storage Engine
 
 - Write-ahead log before acknowledging writes
+- Storage record format: [docs/storage-record-format.md](docs/storage-record-format.md)
 - WAL replay on restart
 - Sorted memtable
 - Immutable flushed SSTables
@@ -56,11 +57,19 @@ These are the minimum features needed for the project to feel complete and credi
 - Client request IDs
 - Basic request timeouts
 - CLI commands:
-  - `atlas put <key> <value>`
-  - `atlas get <key>`
-  - `atlas delete <key>`
-  - `atlasctl status`
-  - `atlasctl ring`
+  - `quorumdb put <key> <value>`
+  - `quorumdb get <key>`
+  - `quorumdb delete <key>`
+  - `quorumctl status`
+  - `quorumctl ring`
+
+### Local Deployment
+
+- Docker image for a Quorum DB node
+- Docker Compose configuration for a three-node local cluster
+- Separate persistent volume for each node
+- Environment-based node identity, ports, seed nodes, and replication settings
+- Container-based integration tests for startup, shutdown, restart, and node failure
 
 ### Testing and Correctness
 
@@ -159,7 +168,6 @@ These are impressive extensions, but they should only be attempted after the mus
 
 ### Deployment and Dashboard
 
-- Docker Compose local cluster
 - Kubernetes manifests
 - Simple cluster dashboard
 - Prometheus metrics endpoint
@@ -176,7 +184,6 @@ These are intentionally out of scope unless everything else is already solid.
 - Joins
 - Full-text search
 - Complex frontend work
-- Kubernetes operator
 
 ## Suggested Milestones
 
@@ -233,7 +240,7 @@ Deliverables:
 - Binary request/response protocol
 - Node server
 - Client CLI
-- `atlasctl status`
+- `quorumctl status`
 - Basic timeouts
 
 Success criteria:
@@ -296,7 +303,7 @@ Success criteria:
 
 ## Guarantees to Document
 
-AtlasDB should be precise about what it guarantees.
+Quorum DB should be precise about what it guarantees.
 
 - Durability: acknowledged writes are persisted through the WAL under the configured durability mode.
 - Replication: each key maps to `N` replicas through the token ring.
