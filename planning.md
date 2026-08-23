@@ -34,7 +34,7 @@ Each person owns a module area for a milestone. The other person can review, tes
 | TCP protocol and server | Naveen | Yashila | `networking/` |
 | CLI tools | Yashila | Naveen | `client/` |
 | Docker and local cluster deployment | Yashila | Naveen | `deployment/`, `Dockerfile`, `compose.yaml` |
-| Simulation and chaos testing | Naveen | Yashila | `simulation/`, `chaos/` |
+| Basic end-to-end testing | Naveen | Yashila | `tests/storage_integration/`, `tests/cluster_integration/` |
 | Benchmarks and metrics | Yashila | Naveen | `benchmark/`, `metrics/` |
 
 ## Concurrency Rules
@@ -73,6 +73,7 @@ Owner: Naveen
 
 | Priority | Task | Status | Depends On | Concepts |
 |---|---|---|---|---|
+| P0 | Define memtable interface and behavior | Done | storage record format | ordered in-memory storage |
 | P0 | Implement `Record` type and last-write-wins comparison | Not Started | storage record format | versioning |
 | P0 | Implement sorted memtable interface | Not Started | `Record` type | ordered maps/skiplists |
 | P0 | Implement `PUT`, `GET`, and tombstone behavior in memtable | Not Started | memtable interface | write path |
@@ -299,7 +300,7 @@ Owner: Yashila
 | P1 | Track heartbeat arrival intervals | Not Started | time abstraction | failure detection |
 | P1 | Compute phi suspicion score | Not Started | heartbeat history | statistics |
 | P1 | Mark nodes suspected/unavailable based on phi | Not Started | phi score | adaptive health |
-| P1 | Add failure detector tests with fake clock | Not Started | detector | timing tests |
+| P1 | Add basic failure detector tests | Not Started | detector | timing tests |
 
 Integration checkpoint:
 
@@ -340,37 +341,35 @@ Integration checkpoint:
 - Removing a node preserves availability.
 - Anti-entropy repair transfers only differing ranges.
 
-## Milestone 8: Testing, Simulation, and Chaos
+## Milestone 8: Basic End-to-End Testing
 
-Goal: make failures reproducible and correctness claims testable.
+Goal: check the main storage and cluster behavior without building a custom testing system.
 
-### Parallel Track A: Deterministic Simulation
+### Parallel Track A: Storage and Restart Tests
 
 Owner: Naveen
 
 | Priority | Task | Status | Depends On | Concepts |
 |---|---|---|---|---|
-| P1 | Add fake clock abstraction | Not Started | core APIs | deterministic time |
-| P1 | Add simulated network abstraction | Not Started | messaging API | reproducible messaging |
-| P1 | Add seeded random scheduler | Not Started | simulation | reproducibility |
-| P1 | Add simulated crash/restart | Not Started | storage recovery | crash testing |
+| P0 | Test `PUT`, `GET`, and `DELETE` on one node | Not Started | node executable | basic behavior |
+| P0 | Restart the node and verify WAL recovery | Not Started | WAL replay | durability |
+| P0 | Verify a deleted key stays deleted after restart | Not Started | tombstones | recovery |
 
-### Parallel Track B: Workload and History Checking
+### Parallel Track B: Three-Node Quorum Tests
 
 Owner: Yashila
 
 | Priority | Task | Status | Depends On | Concepts |
 |---|---|---|---|---|
-| P1 | Build randomized workload generator | Not Started | client API | property-style testing |
-| P1 | Record operation history | Not Started | workload generator | correctness logs |
-| P1 | Check acknowledged writes are not lost | Not Started | history | safety property |
-| P1 | Check eventual convergence after healing | Not Started | history | liveness property |
+| P0 | Start three nodes with Docker Compose | Not Started | Compose cluster | deployment |
+| P0 | Test `ONE`, `QUORUM`, and `ALL` | Not Started | coordinator | consistency levels |
+| P0 | Stop one node and verify QUORUM still works | Not Started | failure handling | availability |
+| P0 | Restart the node and verify missed data is recovered | Not Started | hinted handoff | recovery |
 
 Integration checkpoint:
 
-- A failed simulation prints the seed.
-- Running with the same seed reproduces the same sequence.
-- History checker can flag at least one intentionally injected bug.
+- All seven checks pass using normal commands and GoogleTest where useful.
+- No simulator, history checker, or chaos framework is required.
 
 ## Milestone 9: Benchmarks and Observability
 

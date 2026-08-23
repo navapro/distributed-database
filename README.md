@@ -16,7 +16,7 @@ Core themes:
 - Tunable consistency
 - Failure detection and recovery
 - Read repair and hinted handoff
-- Deterministic simulation and chaos testing
+- Simple unit and end-to-end testing
 - Benchmarking and performance analysis
 
 Project documents:
@@ -24,6 +24,7 @@ Project documents:
 - [Project plan](planning.md)
 - [Development guide](docs/development.md)
 - [Storage record format](docs/storage-record-format.md)
+- [Memtable design](docs/memtable-design.md)
 
 ## Must Have
 
@@ -79,10 +80,9 @@ These are the minimum features needed for the project to feel complete and credi
 
 ### Testing and Correctness
 
-- Unit tests for storage and hashing
-- Integration tests for replication and repair
+- Focused unit tests for each core module
+- A few end-to-end tests for replication and recovery
 - Crash/restart test for WAL durability
-- Simple randomized workload test
 - Documented consistency guarantees
 
 ### Observability
@@ -160,17 +160,6 @@ These are impressive extensions, but they should only be attempted after the mus
 - Backpressure and overload responses
 - Batched writes
 - Buffer pooling
-
-### Advanced Testing
-
-- Chaos testing tool
-- Network partitions
-- Packet loss
-- Packet delays
-- Process pauses
-- Disk delay injection
-- Jepsen-style operation history checker
-- Deterministic simulator with reproducible seeds
 
 ### Deployment and Dashboard
 
@@ -290,22 +279,22 @@ Success criteria:
 - Adding a node moves only the necessary ranges.
 - Benchmarks report real throughput and latency numbers.
 
-### Milestone 6: Chaos and Deterministic Simulation
+### Milestone 6: Basic End-to-End Testing
 
-Prove the system behaves under failure.
+Check that the main database flow works across three containers.
 
 Deliverables:
 
-- Random workload generator
-- Failure injection
-- Operation history log
-- Deterministic simulation seed
+- Basic `PUT`, `GET`, and `DELETE` test
+- WAL restart test
+- `ONE`, `QUORUM`, and `ALL` test
+- One-node stop and restart test
 
 Success criteria:
 
-- Failure cases can be reproduced by seed.
-- Acknowledged writes are not silently lost.
-- Replicas eventually converge after failures heal.
+- Acknowledged writes survive restart.
+- QUORUM works while one of three nodes is down.
+- A restarted node can recover missed data.
 
 ## Guarantees to Document
 
@@ -329,6 +318,6 @@ Quorum DB should be precise about what it guarantees.
 7. Gossip and failure detection
 8. Repair and streaming
 9. Benchmarks
-10. Chaos testing
+10. Basic end-to-end tests
 
 This order keeps the project honest: first make data durable, then make it replicated, then make it survive failures, then make it fast.

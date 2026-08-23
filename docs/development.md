@@ -29,7 +29,7 @@ Planned target categories:
 - Quorum DB node executable
 - Client and control CLI executables
 - Unit and integration test executables
-- Benchmark and simulation executables
+- Benchmark executable
 
 Once the build files exist, the standard local workflow will be:
 
@@ -48,8 +48,7 @@ All Quorum DB targets should enable a common warning set:
 - GCC and Clang: `-Wall -Wextra -Wpedantic`
 - Warnings are treated as errors in continuous integration once the initial build is stable.
 - Debug builds include assertions and debug symbols.
-- AddressSanitizer and UndefinedBehaviorSanitizer builds are required before milestone integration.
-- ThreadSanitizer should be run after background work or concurrent networking is introduced.
+- Sanitizer builds are optional debugging tools.
 
 Compiler flags must be attached to Quorum DB targets rather than set globally so external dependencies do not inherit project warnings.
 
@@ -93,7 +92,6 @@ Each module owns its implementation and exposes a small public interface. Other 
 | Networking | Protocol encoding, sockets, request transport | Quorum policy |
 | Client | User commands and client-side request handling | Server internals |
 | Deployment | Docker image and Compose configuration | Database behavior |
-| Simulation | Fake time, network scheduling, fault injection | Production transport code |
 | Metrics and benchmarks | Measurement and workload generation | Correctness decisions |
 
 Dependencies should point inward through interfaces. For example, the coordinator may call storage and transport interfaces, while storage must not depend on the coordinator.
@@ -131,7 +129,7 @@ Dependencies must be pinned, declared through CMake, documented with their purpo
 - Keep unit tests beside the module they validate in the test hierarchy.
 - Name tests by behavior, such as `WalReplayIgnoresIncompleteFinalRecord`.
 - Every bug fix must include a regression test.
-- Tests must not depend on wall-clock sleeps when a fake clock can be used.
+- Keep tests deterministic and avoid long sleeps.
 - Persistent-storage tests must use isolated temporary directories.
 - Each pull request should stay within one owned module when practical.
 - The other contributor reviews changes to shared interfaces and milestone integrations.
