@@ -56,6 +56,7 @@ Goal: define stable contracts so later work can happen in parallel.
 | P0 | Define repository folder structure | Yashila | Done | storage docs | `docs/repository-structure.md` |
 | P0 | Define coding conventions and build approach | Naveen | Done | test strategy | `docs/development.md` |
 | P0 | Define test strategy and naming | Yashila | Done | build approach | `docs/testing.md` |
+| P0 | Create minimal CMake and GoogleTest setup | Yashila | Done | repository structure | `CMakeLists.txt`, `tests/` |
 
 Milestone status: Done
 
@@ -64,6 +65,7 @@ Integration checkpoint:
 - [x] Agree on folder structure.
 - [x] Agree on record interface.
 - [x] Agree on how tests will be run.
+- [x] Add the root build and test setup.
 
 ## Milestone 1: Single-Node Storage Engine
 
