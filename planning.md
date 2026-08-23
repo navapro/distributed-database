@@ -54,7 +54,7 @@ Goal: define stable contracts so later work can happen in parallel.
 |---|---|---|---|---|---|
 | P0 | Define storage record format: key, value, timestamp, tombstone | Naveen | Done | WAL design, memtable design | `docs/storage-record-format.md` |
 | P0 | Define repository folder structure | Yashila | Not Started | storage docs | folder skeleton proposal |
-| P0 | Define coding conventions and build approach | Naveen | Not Started | test strategy | `docs/development.md` |
+| P0 | Define coding conventions and build approach | Naveen | Done | test strategy | `docs/development.md` |
 | P0 | Define test strategy and naming | Yashila | Not Started | build approach | `docs/testing.md` |
 
 Integration checkpoint:

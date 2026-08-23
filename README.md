@@ -19,6 +19,12 @@ Core themes:
 - Deterministic simulation and chaos testing
 - Benchmarking and performance analysis
 
+Project documents:
+
+- [Project plan](planning.md)
+- [Development guide](docs/development.md)
+- [Storage record format](docs/storage-record-format.md)
+
 ## Must Have
 
 These are the minimum features needed for the project to feel complete and credible.
