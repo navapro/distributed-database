@@ -14,6 +14,13 @@ add_library(quorumdb_common
 
 target_include_directories(quorumdb_common PUBLIC src)
 
+add_library(quorumdb_storage
+    src/storage/memtable.cpp
+)
+
+target_include_directories(quorumdb_storage PUBLIC src)
+target_link_libraries(quorumdb_storage PUBLIC quorumdb_common)
+
 if(QUORUMDB_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
