@@ -27,6 +27,7 @@ Project documents:
 - [Testing guide](docs/testing.md)
 - [Storage record format](docs/storage-record-format.md)
 - [Memtable design](docs/memtable-design.md)
+- [SSTable format](docs/sstable-format.md)
 
 ## Must Have
 

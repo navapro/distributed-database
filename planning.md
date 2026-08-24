@@ -107,7 +107,6 @@ Owner: Yashila
 
 | Priority | Task | Status | Depends On | Concepts |
 |---|---|---|---|---|
-| P0 | Design SSTable entry format | Not Started | storage record format | disk layout |
 | P0 | Write sorted memtable records to SSTable | Not Started | memtable iterator | immutable files |
 | P0 | Add SSTable checksums | Not Started | SSTable writer | crash safety |
 | P0 | Add SSTable writer tests | Not Started | SSTable writer | persistence |
@@ -118,10 +117,11 @@ Owner: Naveen
 
 | Priority | Task | Status | Depends On | Concepts |
 |---|---|---|---|---|
-| P0 | Implement SSTable sequential reader | Not Started | SSTable format | parsing |
-| P0 | Implement point lookup from SSTable | Not Started | sequential reader | read path |
-| P0 | Add tombstone handling in SSTable reads | Not Started | point lookup | delete semantics |
-| P0 | Add SSTable reader tests | Not Started | SSTable reader | edge cases |
+| P0 | Design SSTable entry format | Done | storage record format | disk layout |
+| P0 | Implement SSTable sequential reader | Done | SSTable format | parsing |
+| P0 | Implement point lookup from SSTable | Done | sequential reader | read path |
+| P0 | Add tombstone handling in SSTable reads | Done | point lookup | delete semantics |
+| P0 | Add SSTable reader tests | Done | SSTable reader | edge cases |
 
 Integration checkpoint:
 
@@ -173,10 +173,10 @@ Owner: Naveen
 
 | Priority | Task | Status | Depends On | Concepts |
 |---|---|---|---|---|
-| P0 | Implement consistent hash ring | Not Started | none | token ownership |
-| P0 | Add virtual nodes | Not Started | hash ring | load distribution |
-| P0 | Compute replica preference list for a key | Not Started | virtual nodes | replica placement |
-| P0 | Add ring unit tests | Not Started | preference list | deterministic hashing |
+| P0 | Implement consistent hash ring | Done | none | token ownership |
+| P0 | Add virtual nodes | Done | hash ring | load distribution |
+| P0 | Compute replica preference list for a key | Done | virtual nodes | replica placement |
+| P0 | Add ring unit tests | Done | preference list | deterministic hashing |
 
 ### Parallel Track B: Quorum Coordinator
 
@@ -206,7 +206,7 @@ Owner: Naveen
 
 | Priority | Task | Status | Depends On | Concepts |
 |---|---|---|---|---|
-| P0 | Add node health state to in-process cluster | Not Started | cluster model | failure modeling |
+| P0 | Add node health state to in-process cluster | Done | cluster model | failure modeling |
 | P0 | Store hinted handoff records for down replicas | Not Started | write coordinator | availability |
 | P0 | Replay hints after node recovery | Not Started | hint storage | recovery |
 | P0 | Add hinted handoff tests | Not Started | hint replay | fault tolerance |
