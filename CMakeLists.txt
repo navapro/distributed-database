@@ -8,6 +8,12 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(QUORUMDB_BUILD_TESTS "Build Quorum DB tests" ON)
 
+add_library(quorumdb_common
+    src/common/record.cpp
+)
+
+target_include_directories(quorumdb_common PUBLIC src)
+
 if(QUORUMDB_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)

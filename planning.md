@@ -78,7 +78,7 @@ Owner: Naveen
 | Priority | Task | Status | Depends On | Concepts |
 |---|---|---|---|---|
 | P0 | Define memtable interface and behavior | Done | storage record format | ordered in-memory storage |
-| P0 | Implement `Record` type and last-write-wins comparison | Not Started | storage record format | versioning |
+| P0 | Implement `Record` type and last-write-wins comparison | Done | storage record format | versioning |
 | P0 | Implement sorted memtable interface | Not Started | `Record` type | ordered maps/skiplists |
 | P0 | Implement `PUT`, `GET`, and tombstone behavior in memtable | Not Started | memtable interface | write path |
 | P0 | Add memtable unit tests | Not Started | memtable behavior | test design |
