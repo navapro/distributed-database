@@ -1,5 +1,4 @@
 #include "storage/sstable_reader.h"
-
 #include <algorithm>
 #include <array>
 #include <fstream>

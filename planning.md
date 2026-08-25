@@ -89,11 +89,11 @@ Owner: Yashila
 
 | Priority | Task | Status | Depends On | Concepts |
 |---|---|---|---|---|
-| P0 | Design binary WAL entry format | Not Started | storage record format | durability |
-| P0 | Implement WAL append | Not Started | WAL format | file I/O |
-| P0 | Implement WAL iterator/replay reader | Not Started | WAL append | crash recovery |
-| P0 | Add WAL checksum validation | Not Started | WAL reader | corruption detection |
-| P0 | Add WAL unit tests | Not Started | WAL implementation | recovery tests |
+| P0 | Design binary WAL entry format | Done | storage record format | durability |
+| P0 | Implement WAL append | Done | WAL format | file I/O |
+| P0 | Implement WAL iterator/replay reader | Done | WAL append | crash recovery |
+| P0 | Add WAL checksum validation | Done | WAL reader | corruption detection |
+| P0 | Add WAL unit tests | Done | WAL implementation | recovery tests |
 
 Integration checkpoint:
 
@@ -107,9 +107,9 @@ Owner: Yashila
 
 | Priority | Task | Status | Depends On | Concepts |
 |---|---|---|---|---|
-| P0 | Write sorted memtable records to SSTable | Not Started | memtable iterator | immutable files |
-| P0 | Add SSTable checksums | Not Started | SSTable writer | crash safety |
-| P0 | Add SSTable writer tests | Not Started | SSTable writer | persistence |
+| P0 | Write sorted memtable records to SSTable | Done | memtable iterator | immutable files |
+| P0 | Add SSTable checksums | Done | SSTable writer | crash safety |
+| P0 | Add SSTable writer tests | Done | SSTable writer | persistence |
 
 ### Parallel Track D: SSTable Reader
 
