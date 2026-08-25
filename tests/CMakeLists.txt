@@ -15,6 +15,7 @@ add_executable(quorumdb_tests
     unit/node_registry_test.cpp
     unit/record_test.cpp
     unit/sstable_reader_test.cpp
+    unit/wal_test.cpp
 )
 
 target_link_libraries(

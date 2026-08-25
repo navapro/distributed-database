@@ -10,6 +10,7 @@ option(QUORUMDB_BUILD_TESTS "Build Quorum DB tests" ON)
 
 add_library(quorumdb_common
     src/common/record.cpp
+    src/storage/wal/wal.cpp
 )
 
 target_include_directories(quorumdb_common PUBLIC src)
